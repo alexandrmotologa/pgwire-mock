@@ -682,9 +682,10 @@
       const sseStatus = document.getElementById('sse-status');
       const es = new EventSource('/api/events');
 
-      es.addEventListener('connected', () => {
-        sseStatus.style.display = 'inline-flex';
-      });
+      es.onopen = () => {
+        sseStatus.innerHTML = '<span class="pulse-dot"></span> LIVE CONNECTED';
+        sseStatus.className = 'status-badge';
+      };
 
       es.addEventListener('query', (e) => {
         try {
@@ -703,10 +704,24 @@
       };
     }
 
+    async function fetchInitialQueries() {
+      try {
+        const res = await fetch('/api/queries');
+        const data = await res.json();
+        if (data.queries && Array.isArray(data.queries)) {
+          queries = data.queries.slice().reverse();
+          renderQueries();
+        }
+      } catch (e) {
+        console.error('failed to fetch query history', e);
+      }
+    }
+
     // Initialize
     document.getElementById('admin-url').textContent = window.location.origin;
     fetchMetrics();
     fetchRules();
+    fetchInitialQueries();
     setupSSE();
     setInterval(fetchMetrics, 3000);
   </script>

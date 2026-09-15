@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <clipPath id="squircle-clip">
+      <rect x="24" y="24" width="976" height="976" rx="220" />
+    </clipPath>
+
+    <!-- Optics & Core Gradients -->
+    <linearGradient id="cyan-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f5ff"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+
+    <linearGradient id="cyan-accent" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+
+    <!-- Tusks Titanium Gradient -->
+    <linearGradient id="tusk-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </linearGradient>
+
+    <linearGradient id="tusk-shadow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#cbd5e1"/>
+      <stop offset="60%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+
+    <filter id="subtle-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.14" />
+    </filter>
+  </defs>
+
+  <!-- Luxury White Squircle Container -->
+  <rect x="24" y="24" width="976" height="976" rx="220" fill="#ffffff" stroke="#e2e8f0" stroke-width="6" />
+
+  <g clip-path="url(#squircle-clip)">
+    <g transform="translate(512, 512)" filter="url(#subtle-shadow)">
+
+      <!-- Hexagonal Architectural Gateway Frame -->
+      <polygon points="
+        0,-390
+        338,-195
+        338,195
+        0,390
+        -338,195
+        -338,-195
+      " fill="none" stroke="#0f172a" stroke-width="36" stroke-linejoin="round" />
+
+      <!-- Inner Concentric Dashed Cyan Circuit Ring -->
+      <polygon points="
+        0,-355
+        307,-177
+        307,177
+        0,355
+        -307,177
+        -307,-177
+      " fill="none" stroke="#00f5ff" stroke-width="4" opacity="0.45" stroke-dasharray="16, 12" />
+
+      <!-- 100% Watertight Solid Base Silhouette (Zero-Leak Rule) -->
+      <path d="
+        M 0 -260
+        L 90 -255 L 180 -230 L 260 -170 L 320 -70 L 325 30 L 290 120 L 240 180 L 190 160
+        L 180 200 L 140 240 L 90 270 L 45 285 L 40 330 L 0 340
+        L -40 330 L -45 285 L -90 270 L -140 240 L -180 200 L -190 160
+        L -240 180 L -290 120 L -325 30 L -320 -70 L -260 -170 L -180 -230 L -90 -255
+        Z
+      " fill="#0b0f19" />
+
+      <!-- ================= MASCOT: THE WIRE-ELEPHANT (SLONIK MIRROR) ================= -->
+
+      <!-- LEFT EAR (Volumetric Light Side) -->
+      <!-- Outer Ear Flange -->
+      <polygon points="0,-260 -90,-255 -180,-230 -100,-150" fill="#475569" />
+      <polygon points="-180,-230 -260,-170 -200,-90 -100,-150" fill="#334155" />
+      <polygon points="-260,-170 -320,-70 -230,-10 -200,-90" fill="#475569" />
+      <polygon points="-320,-70 -325,30 -240,40 -230,-10" fill="#334155" />
+      <polygon points="-325,30 -290,120 -220,100 -240,40" fill="#1e293b" />
+      <polygon points="-290,120 -240,180 -180,120 -220,100" fill="#0f172a" />
+
+      <!-- Inner Ear Facets -->
+      <polygon points="-100,-150 -200,-90 -140,-40 -70,-90" fill="#64748b" />
+      <polygon points="-200,-90 -230,-10 -150,10 -140,-40" fill="#475569" />
+      <polygon points="-230,-10 -240,40 -160,50 -150,10" fill="#334155" />
+      <polygon points="-240,40 -220,100 -150,80 -160,50" fill="#1e293b" />
+
+      <!-- RIGHT EAR (Volumetric Shadow Side) -->
+      <!-- Outer Ear Flange -->
+      <polygon points="0,-260 90,-255 180,-230 100,-150" fill="#1e293b" />
+      <polygon points="180,-230 260,-170 200,-90 100,-150" fill="#0f172a" />
+      <polygon points="260,-170 320,-70 230,-10 200,-90" fill="#1e293b" />
+      <polygon points="320,-70 325,30 240,40 230,-10" fill="#0f172a" />
+      <polygon points="325,30 290,120 220,100 240,40" fill="#0b0f19" />
+      <polygon points="290,120 240,180 180,120 220,100" fill="#070a10" />
+
+      <!-- Inner Ear Facets -->
+      <polygon points="100,-150 200,-90 140,-40 70,-90" fill="#334155" />
+      <polygon points="200,-90 230,-10 150,10 140,-40" fill="#1e293b" />
+      <polygon points="230,-10 240,40 160,50 150,10" fill="#0f172a" />
+      <polygon points="240,40 220,100 150,80 160,50" fill="#0b0f19" />
+
+      <!-- FOREHEAD & CRANIAL CREST -->
+      <!-- Central Top Apex -->
+      <polygon points="0,-260 -50,-210 0,-170" fill="#64748b" />
+      <polygon points="0,-260 0,-170 50,-210" fill="#334155" />
+      <polygon points="-50,-210 -100,-150 -70,-90 0,-120" fill="#475569" />
+      <polygon points="50,-210 0,-120 70,-90 100,-150" fill="#1e293b" />
+      <polygon points="-50,-210 0,-170 0,-120" fill="#64748b" />
+      <polygon points="50,-210 0,-120 0,-170" fill="#334155" />
+
+      <!-- Central Brow & Sensor Plate -->
+      <polygon points="0,-120 -60,-60 0,-30" fill="#94a3b8" />
+      <polygon points="0,-120 0,-30 60,-60" fill="#475569" />
+      <polygon points="-70,-90 -60,-60 -110,-20 -120,-70" fill="#475569" />
+      <polygon points="70,-90 120,-70 110,-20 60,-60" fill="#1e293b" />
+
+      <!-- PREDATOR OPTICS (Slanted Geometric Eyes) -->
+      <!-- Left Eye Socket & Eye -->
+      <polygon points="-110,-20 -60,-60 -50,-20 -95,-5" fill="#0b0f19" />
+      <polygon points="-100,-18 -65,-45 -55,-22 -90,-8" fill="url(#cyan-glow)" />
+      <polygon points="-82,-26 -68,-36 -62,-23 -78,-16" fill="#ffffff" opacity="0.9" />
+
+      <!-- Right Eye Socket & Eye -->
+      <polygon points="110,-20 95,-5 50,-20 60,-60" fill="#0b0f19" />
+      <polygon points="100,-18 90,-8 55,-22 65,-45" fill="url(#cyan-glow)" />
+      <polygon points="82,-26 78,-16 62,-23 68,-36" fill="#ffffff" opacity="0.9" />
+
+      <!-- Eye Brow Shields -->
+      <polygon points="-60,-60 -50,-20 0,-30" fill="#cbd5e1" />
+      <polygon points="60,-60 0,-30 50,-20" fill="#64748b" />
+
+      <!-- CHEEKS & TUSK MOUNTS -->
+      <polygon points="-95,-5 -50,-20 -50,40 -105,30" fill="#475569" />
+      <polygon points="95,-5 105,30 50,40 50,-20" fill="#1e293b" />
+      <polygon points="-105,30 -50,40 -45,95 -115,85" fill="#334155" />
+      <polygon points="105,30 115,85 45,95 50,40" fill="#0f172a" />
+
+      <!-- TITANIUM TUSKS (Sleek Geometric Saber Curves) -->
+      <!-- Left Tusk -->
+      <polygon points="-50,40 -45,95 -120,130 -160,70" fill="url(#tusk-light)" />
+      <polygon points="-120,130 -160,70 -195,-20 -155,10" fill="url(#tusk-light)" />
+      <polygon points="-45,95 -60,110 -120,130" fill="url(#tusk-shadow)" />
+
+      <!-- Right Tusk -->
+      <polygon points="50,40 160,70 120,130 45,95" fill="url(#tusk-shadow)" />
+      <polygon points="120,130 155,10 195,-20 160,70" fill="url(#tusk-shadow)" />
+      <polygon points="45,95 120,130 60,110" fill="#64748b" />
+
+      <!-- CENTRAL TRUNK (Segmented Protocol Wire Bus) -->
+      <!-- Segment 1: Bridge to Trunk -->
+      <polygon points="0,-30 -50,-20 -40,35 0,45" fill="#64748b" />
+      <polygon points="0,-30 0,45 40,35 50,-20" fill="#334155" />
+
+      <!-- Segment 2 -->
+      <polygon points="0,45 -40,35 -38,95 0,105" fill="#475569" />
+      <polygon points="0,45 0,105 38,95 40,35" fill="#1e293b" />
+
+      <!-- Segment 3: Cyber Accent Band -->
+      <polygon points="0,105 -38,95 -35,145 0,155" fill="url(#cyan-glow)" />
+      <polygon points="0,105 0,155 35,145 38,95" fill="url(#cyan-accent)" />
+
+      <!-- Segment 4 -->
+      <polygon points="0,155 -35,145 -30,205 0,215" fill="#334155" />
+      <polygon points="0,155 0,215 30,205 35,145" fill="#0f172a" />
+
+      <!-- Segment 5 -->
+      <polygon points="0,215 -30,205 -25,265 0,275" fill="#475569" />
+      <polygon points="0,215 0,275 25,265 30,205" fill="#1e293b" />
+
+      <!-- Segment 6: Trunk Terminal Tip -->
+      <polygon points="0,275 -25,265 -18,315 0,325" fill="#64748b" />
+      <polygon points="0,275 0,325 18,315 25,265" fill="#334155" />
+      <polygon points="-18,315 0,325 18,315 0,335" fill="#00f5ff" />
+
+      <!-- Center Chest Armor Plating -->
+      <polygon points="-45,95 -115,85 -90,165 -35,145" fill="#1e293b" />
+      <polygon points="45,95 35,145 90,165 115,85" fill="#0b0f19" />
+      <polygon points="-35,145 -90,165 -75,220 -30,205" fill="#0f172a" />
+      <polygon points="35,145 30,205 75,220 90,165" fill="#070a10" />
+
+      <!-- Fine Hex Vertex Pins (Discreet Engineering Touch) -->
+      <circle cx="0" cy="-390" r="8" fill="#00f5ff" />
+      <circle cx="338" cy="-195" r="8" fill="#00f5ff" />
+      <circle cx="338" cy="195" r="8" fill="#00f5ff" />
+      <circle cx="0" cy="390" r="8" fill="#00f5ff" />
+      <circle cx="-338" cy="195" r="8" fill="#00f5ff" />
+      <circle cx="-338" cy="-195" r="8" fill="#00f5ff" />
+    </g>
+  </g>
+</svg>

@@ -1,8 +1,25 @@
-# PGWire-Mock
+<p align="center">
+  <a href="https://github.com/alexandrmotologa/pgwire-mock">
+    <img src="docs/images/logo.png?raw=true" alt="PGWire-Mock Logo" width="130" style="border-radius: 24px;" />
+  </a>
+</p>
 
-Fast PostgreSQL Protocol 3.0 mock socket server and recording proxy for automated testing and CI pipelines.
+<h1 align="center">PGWire-Mock</h1>
 
-Starting PostgreSQL in Docker for continuous integration suites requires 10 to 45 seconds and consumes hundreds of megabytes of memory. PGWire-Mock starts in under one millisecond, uses less than 10MB of RAM, and speaks the native PostgreSQL wire protocol over TCP. Client libraries, query builders, and ORMs connect directly without code changes.
+<p align="center">
+  <strong>Fast, standalone PostgreSQL Protocol 3.0 mock socket server, chaos engineering engine, and recording proxy for CI/CD and developer workflows.</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/alexandrmotologa/pgwire-mock/actions"><img src="https://img.shields.io/github/actions/workflow/status/alexandrmotologa/pgwire-mock/ci.yml?branch=main&label=CI&logo=github" alt="CI" /></a>
+  <a href="https://pkg.go.dev/github.com/alexandrmotologa/pgwire-mock"><img src="https://pkg.go.dev/badge/github.com/alexandrmotologa/pgwire-mock.svg" alt="Go Reference" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License" /></a>
+  <a href="https://github.com/alexandrmotologa/pgwire-mock/releases"><img src="https://img.shields.io/github/v/release/alexandrmotologa/pgwire-mock?include_prereleases&label=release" alt="Release" /></a>
+</p>
+
+---
+
+Starting PostgreSQL in Docker for continuous integration suites requires 10 to 45 seconds and consumes hundreds of megabytes of memory. PGWire-Mock starts in under one millisecond, uses less than 10MB of RAM, and speaks the native PostgreSQL wire protocol over standard TCP sockets. Client libraries, query builders, and ORMs connect directly without code changes.
 
 ![PGWire-Mock Architecture](docs/images/architecture.svg)
 
@@ -21,6 +38,24 @@ Starting PostgreSQL in Docker for continuous integration suites requires 10 to 4
 - **Test SDKs for JS and Python**: Zero-dependency packages for Jest, Vitest, and PyTest (`sdk/js`, `sdk/python`).
 - **Traffic recording and offline replay**: Proxy client traffic to a live PostgreSQL server and save sessions to portable `.pgtape` files for offline playback in isolated environments.
 - **Prometheus metrics**: Standard `/metrics` endpoint reports active connections, total query volume, and registered rule counts.
+
+## Realtime control dashboard
+
+PGWire-Mock includes a zero-dependency dark-mode web dashboard embedded directly into the Go binary via `embed.FS`.
+
+<p align="center">
+  <img src="docs/images/dashboard_demo.gif?raw=true" alt="PGWire-Mock Realtime Dashboard Demo" width="850" style="border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);" />
+</p>
+
+Open `http://localhost:8080/dashboard` in your browser to:
+- **Stream queries live**: Observe Simple and Extended queries streaming in real time via Server-Sent Events (SSE).
+- **Inspect active rules and hits**: Review registered mock conditions, regex patterns, and query hit counters.
+- **Query simulator**: Test whether an arbitrary SQL string matches existing rules without launching a database client.
+- **Chaos testing**: Dynamically inject latency, jitter, or simulated socket drops into client sessions.
+
+| Live Query Stream & Telemetry | Chaos Engineering & Rule Testing |
+|:---:|:---:|
+| <img src="docs/images/dashboard_live.png?raw=true" alt="Live Query Stream" width="460" /> | <img src="docs/images/dashboard_chaos.png?raw=true" alt="Chaos Testing Panel" width="460" /> |
 
 ## Installation
 
@@ -65,6 +100,9 @@ Output:
  PGWire-Mock v1.0.0 - PostgreSQL Protocol Mock Server
 ==============================================================
  PostgreSQL Mock Socket : localhost:5432
+ TLS/SSL Encryption     : Disabled (plaintext)
+ Stateful CRUD Store    : Enabled (in-memory CRUD)
+ Web Realtime Dashboard : http://localhost:8080/dashboard
  HTTP Admin & Assert API: http://localhost:8080
  Prometheus Metrics     : http://localhost:8080/metrics
  Active Mock Rules      : 5
@@ -209,16 +247,6 @@ pgwire-mock --port 5432 --stateful
 ```
 
 When `--stateful` is enabled, the server maintains tables and records in memory. Statements return real `RowDescription` and `DataRow` packets, and non-existent tables return PostgreSQL error `42P01` (relation does not exist).
-
-## Realtime control dashboard
-
-PGWire-Mock includes a dark-mode web dashboard embedded directly into the binary with zero external assets or npm build steps:
-
-Open `http://localhost:8080/dashboard` in your browser to:
-- Monitor live queries in real time via Server-Sent Events (SSE).
-- View active connections and query throughput counters.
-- Inspect, test, and register mock rules interactively.
-- Trigger on-the-fly fault injection (latency, jitter, socket termination).
 
 ## Test runner SDKs
 
