@@ -29,3 +29,6 @@ Thumbs.db
 
 # Dependencies
 vendor/
+node_modules/
+__pycache__/
+*.pyc

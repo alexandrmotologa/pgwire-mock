@@ -17,21 +17,44 @@ type QueryLog struct {
 
 // Engine manages mock rules and matches incoming queries
 type Engine struct {
-	mu      sync.RWMutex
-	rules   []*Rule
-	matcher *Matcher
+	mu         sync.RWMutex
+	rules      []*Rule
+	matcher    *Matcher
+	stateStore *StateStore
 
-	logMu sync.RWMutex
-	logs  []QueryLog
+	logMu   sync.RWMutex
+	logs    []QueryLog
+	onQuery func(QueryLog)
 }
 
 // NewEngine creates a new mock Engine
 func NewEngine(initialRules []*Rule) *Engine {
 	return &Engine{
-		rules:   initialRules,
-		matcher: NewMatcher(),
-		logs:    make([]QueryLog, 0),
+		rules:      initialRules,
+		matcher:    NewMatcher(),
+		stateStore: NewStateStore(),
+		logs:       make([]QueryLog, 0),
 	}
+}
+
+// EnableStateful enables or disables in-memory CRUD state tracking
+func (e *Engine) EnableStateful(enable bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if enable {
+		if e.stateStore == nil {
+			e.stateStore = NewStateStore()
+		}
+	} else {
+		e.stateStore = nil
+	}
+}
+
+// StateStore returns the underlying in-memory state store if enabled
+func (e *Engine) StateStore() *StateStore {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.stateStore
 }
 
 // AddRule appends a rule to the active registry
@@ -88,14 +111,28 @@ func (e *Engine) LogQuery(query string, params [][]byte, matchedID string) {
 		}
 	}
 
-	e.logMu.Lock()
-	defer e.logMu.Unlock()
-	e.logs = append(e.logs, QueryLog{
+	entry := QueryLog{
 		Timestamp:     time.Now().UTC(),
 		Query:         query,
 		Params:        paramStrings,
 		MatchedRuleID: matchedID,
-	})
+	}
+
+	e.logMu.Lock()
+	e.logs = append(e.logs, entry)
+	hook := e.onQuery
+	e.logMu.Unlock()
+
+	if hook != nil {
+		hook(entry)
+	}
+}
+
+// SetOnQueryHook registers a callback invoked whenever a query is processed
+func (e *Engine) SetOnQueryHook(hook func(QueryLog)) {
+	e.logMu.Lock()
+	defer e.logMu.Unlock()
+	e.onQuery = hook
 }
 
 // GetLogs returns all recorded queries
@@ -133,6 +170,24 @@ func (e *Engine) Match(query string, params [][]byte) *Rule {
 	if fallback != nil {
 		e.LogQuery(query, params, "builtin-system")
 		return fallback
+	}
+
+	// Stateful in-memory CRUD handler (if enabled)
+	e.mu.RLock()
+	store := e.stateStore
+	e.mu.RUnlock()
+	if store != nil {
+		if stateRule, handled := store.MatchAndExecute(query, params); handled {
+			e.LogQuery(query, params, stateRule.ID)
+			return stateRule
+		}
+	}
+
+	// PostgreSQL catalog and ORM introspection query interceptor
+	catalogRule := MatchCatalogQuery(query)
+	if catalogRule != nil {
+		e.LogQuery(query, params, catalogRule.ID)
+		return catalogRule
 	}
 
 	// Final generic fallback for unmatched queries

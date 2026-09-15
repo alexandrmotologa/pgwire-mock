@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pgwire-mock"
+version = "1.0.0"
+description = "Zero-dependency Python client and PyTest fixtures for PGWire-Mock"
+readme = "README.md"
+authors = [{ name = "Alexandr Motologa" }]
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Database",
+]
+requires-python = ">=3.8"
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/alexandrmotologa/pgwire-mock"

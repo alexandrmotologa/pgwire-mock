@@ -1,0 +1,26 @@
+{
+  "name": "@alexandrmotologa/pgwire-mock",
+  "version": "1.0.0",
+  "description": "Zero-dependency Node.js and TypeScript test helper SDK for PGWire-Mock",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "node -e 'console.log(\"PGWireMock SDK ready\")'"
+  },
+  "keywords": [
+    "postgresql",
+    "pgwire",
+    "mock",
+    "testing",
+    "jest",
+    "vitest",
+    "database-testing"
+  ],
+  "author": "Alexandr Motologa",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexandrmotologa/pgwire-mock.git",
+    "directory": "sdk/js"
+  }
+}

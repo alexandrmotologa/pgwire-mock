@@ -10,9 +10,15 @@ Starting PostgreSQL in Docker for continuous integration suites requires 10 to 4
 
 - **Wire protocol compatibility**: Implements PostgreSQL Frontend/Backend Protocol 3.0 over standard TCP sockets (default port 5432).
 - **Simple and extended query support**: Handles Simple Query (`'Q'`) as well as Extended Query (`Parse`, `Bind`, `Describe`, `Execute`, `Sync`) with parameter placeholders (`$1`, `$2`). Works with Prisma, Drizzle, GORM, Go pgx, and Python psycopg.
+- **ORM auto-introspection**: Intercepts common catalog queries (`pg_type`, `pg_class`, `pg_namespace`, `information_schema.tables`, `current_schema()`) so connection pools connect without configuration.
+- **Dynamic response templating**: Inject generated values using template tags (`{{uuid}}`, `{{now}}`, `{{today}}`, `{{param 1}}`, `{{sequence}}`, `{{random min max}}`, `{{email}}`).
+- **In-memory stateful table store**: Optional `--stateful` mode provides an in-memory SQL database for `CREATE TABLE`, `INSERT`, `SELECT`, `UPDATE`, and `DELETE`.
 - **Rule engine**: Match incoming queries using exact SQL, normalized SQL, regular expressions, or expected parameter values defined in YAML or JSON files.
-- **Fault injection**: Simulate latency, random jitter, specific SQLSTATE error codes (e.g. `40001` serialization failure, `57P01` admin shutdown), and immediate socket termination.
+- **Binary wire encoding**: Supports binary format code (1) encoding for standard types (`int2`, `int4`, `int8`, `float4`, `float8`, `bool`, `bytea`).
+- **TLS and SSL support**: Handles `sslmode=require` with automatic in-memory self-signed certificates or custom PEM keys.
+- **Embedded real-time web dashboard**: Dark-mode dashboard at `/dashboard` with Server-Sent Events (SSE) streaming live queries and interactive rule testing.
 - **Embedded HTTP admin and assertion API**: Test runners query the server at runtime (`POST /api/rules`, `GET /api/queries`, `POST /api/assert`, `POST /api/reset`) to verify call counts and parameter bindings.
+- **Test SDKs for JS and Python**: Zero-dependency packages for Jest, Vitest, and PyTest (`sdk/js`, `sdk/python`).
 - **Traffic recording and offline replay**: Proxy client traffic to a live PostgreSQL server and save sessions to portable `.pgtape` files for offline playback in isolated environments.
 - **Prometheus metrics**: Standard `/metrics` endpoint reports active connections, total query volume, and registered rule counts.
 
@@ -171,6 +177,81 @@ curl -X POST http://localhost:8080/api/assert \
 curl -X POST http://localhost:8080/api/reset
 ```
 
+## Dynamic response templating
+
+You can generate realistic IDs, timestamps, and echo input parameters in mock rows:
+
+```yaml
+rules:
+  - id: create-order
+    query: "INSERT INTO orders (item, amount) VALUES ($1, $2)"
+    columns: ["id", "item", "amount", "created_at"]
+    rows:
+      - ["{{uuid}}", "{{param 1}}", "{{param 2}}", "{{now}}"]
+    tag: "INSERT 0 1"
+```
+
+Available template tags:
+- `{{uuid}}`: Generates random RFC 4122 v4 UUID strings.
+- `{{now}}`: Current UTC timestamp (`2006-01-02 15:04:05.000000+00`). Supports offsets: `{{now - 1h}}`, `{{now + 2d}}`.
+- `{{today}}`: Current UTC date (`2006-01-02`). Supports offsets: `{{today + 7d}}`.
+- `{{param 1}}` or `{{param $1}}`: Evaluates to bound parameter value from `$1`.
+- `{{sequence}}` or `{{seq}}`: Atomic incrementing integer counter.
+- `{{random 10 100}}`: Random integer between min and max.
+- `{{email}}`: Generates unique mock email addresses.
+
+## Stateful in-memory table store
+
+For zero-configuration test cases where you want `CREATE TABLE`, `INSERT`, `SELECT`, `UPDATE`, and `DELETE` to work like an actual database without creating static mock rules:
+
+```bash
+pgwire-mock --port 5432 --stateful
+```
+
+When `--stateful` is enabled, the server maintains tables and records in memory. Statements return real `RowDescription` and `DataRow` packets, and non-existent tables return PostgreSQL error `42P01` (relation does not exist).
+
+## Realtime control dashboard
+
+PGWire-Mock includes a dark-mode web dashboard embedded directly into the binary with zero external assets or npm build steps:
+
+Open `http://localhost:8080/dashboard` in your browser to:
+- Monitor live queries in real time via Server-Sent Events (SSE).
+- View active connections and query throughput counters.
+- Inspect, test, and register mock rules interactively.
+- Trigger on-the-fly fault injection (latency, jitter, socket termination).
+
+## Test runner SDKs
+
+### JavaScript / TypeScript (Jest, Vitest)
+
+Install from `sdk/js`:
+
+```javascript
+import { PGWireMock } from '@alexandrmotologa/pgwire-mock';
+
+const mock = new PGWireMock({ adminUrl: 'http://localhost:8080' });
+await mock.addRule({
+  query: 'SELECT * FROM users',
+  columns: ['id', 'name'],
+  rows: [['1', 'Alice']],
+});
+```
+
+### Python (PyTest)
+
+Install from `sdk/python`:
+
+```python
+from pgwire_mock import PGWireMock
+
+mock = PGWireMock(admin_url="http://localhost:8080")
+mock.add_rule({
+    "query": "SELECT * FROM users",
+    "columns": ["id", "name"],
+    "rows": [["1", "Alice"]]
+})
+```
+
 ## Traffic record and replay
 
 Record live database interactions from an upstream PostgreSQL instance:
@@ -190,8 +271,12 @@ pgwire-mock --port 5432 --replay recordings/checkout.pgtape
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--port`, `-p` | `5432` | PostgreSQL mock TCP listen port |
-| `--admin-port` | `8080` | HTTP REST Admin and Assertion API port |
+| `--admin-port` | `8080` | HTTP REST Admin, Dashboard, and Assertion API port |
 | `--rules`, `-r` | `""` | Path to YAML or JSON mock rules file |
+| `--stateful` | `false` | Enable in-memory stateful table CRUD storage |
+| `--ssl` | `false` | Enable TLS/SSL encryption for client connections |
+| `--tls-cert` | `""` | Path to TLS certificate PEM file (auto-generated if empty) |
+| `--tls-key` | `""` | Path to TLS private key PEM file |
 | `--upstream` | `""` | Upstream live PostgreSQL host:port for proxy mode |
 | `--record` | `""` | File path to record network traffic into `.pgtape` format |
 | `--replay` | `""` | File path to replay offline mock session from `.pgtape` format |

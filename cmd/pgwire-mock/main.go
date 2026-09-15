@@ -50,9 +50,19 @@ func main() {
 	}
 
 	engine := mock.NewEngine(rules)
+	engine.EnableStateful(cfg.Stateful)
 
 	pgAddr := fmt.Sprintf("0.0.0.0:%d", cfg.Port)
 	pgServer := server.NewServer(pgAddr, engine, cfg.Verbose)
+
+	if cfg.SSL {
+		tlsCfg, err := server.LoadOrGenerateTLSConfig(cfg.TLSCert, cfg.TLSKey)
+		if err != nil {
+			log.Fatalf("failed to initialize TLS: %v", err)
+		}
+		pgServer.SetTLSConfig(tlsCfg)
+		log.Printf("[pgwire] TLS/SSL encryption enabled")
+	}
 
 	if err := pgServer.Start(); err != nil {
 		log.Fatalf("failed to start pgwire server: %v", err)
@@ -68,7 +78,7 @@ func main() {
 		}
 	}
 
-	printStartupBanner(cfg.Port, cfg.AdminPort, len(rules))
+	printStartupBanner(cfg.Port, cfg.AdminPort, len(rules), cfg.SSL, cfg.Stateful)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -84,12 +94,24 @@ func main() {
 	log.Println("[pgwire] server stopped gracefully")
 }
 
-func printStartupBanner(pgPort, adminPort, ruleCount int) {
+func printStartupBanner(pgPort, adminPort, ruleCount int, ssl, stateful bool) {
+	sslStatus := "Disabled (plaintext)"
+	if ssl {
+		sslStatus = "Enabled (TLS/SSL)"
+	}
+	stateStatus := "Disabled (rules-only)"
+	if stateful {
+		stateStatus = "Enabled (in-memory CRUD)"
+	}
+
 	fmt.Println("==============================================================")
 	fmt.Printf(" PGWire-Mock v%s - PostgreSQL Protocol Mock Server\n", Version)
 	fmt.Println("==============================================================")
 	fmt.Printf(" PostgreSQL Mock Socket : localhost:%d\n", pgPort)
+	fmt.Printf(" TLS/SSL Encryption     : %s\n", sslStatus)
+	fmt.Printf(" Stateful CRUD Store    : %s\n", stateStatus)
 	if adminPort > 0 {
+		fmt.Printf(" Web Realtime Dashboard : http://localhost:%d/dashboard\n", adminPort)
 		fmt.Printf(" HTTP Admin & Assert API: http://localhost:%d\n", adminPort)
 		fmt.Printf(" Prometheus Metrics     : http://localhost:%d/metrics\n", adminPort)
 	}

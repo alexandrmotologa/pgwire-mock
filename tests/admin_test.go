@@ -109,4 +109,23 @@ func TestAdminAPIEndpoints(t *testing.T) {
 	if !bytes.Contains(metricsData, []byte("pgwire_mock_rules_total")) {
 		t.Errorf("metrics missing pgwire_mock_rules_total metric")
 	}
+
+	// 8. Test Dashboard endpoints
+	resp, err = client.Get(baseURL + "/dashboard")
+	if err != nil {
+		t.Fatalf("failed to get dashboard: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200 for dashboard, got %d", resp.StatusCode)
+	}
+	dashHTML, _ := io.ReadAll(resp.Body)
+	if !bytes.Contains(dashHTML, []byte("PGWire-Mock Dashboard")) {
+		t.Errorf("expected dashboard HTML title in response")
+	}
+
+	// Root redirects or serves dashboard
+	resp, err = client.Get(baseURL + "/")
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200 for root dashboard, got %d", resp.StatusCode)
+	}
 }

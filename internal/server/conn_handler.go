@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -29,6 +30,7 @@ type ConnHandler struct {
 	bufferPool *BufferPool
 	verbose    bool
 	txStatus   byte
+	tlsConfig  *tls.Config
 
 	stmts   map[string]*protocol.ParseMessage
 	portals map[string]*portalState
@@ -38,13 +40,14 @@ type ConnHandler struct {
 }
 
 // NewConnHandler creates a handler for a client connection
-func NewConnHandler(conn net.Conn, engine *mock.Engine, pool *BufferPool, verbose bool, activeConns *int64, queryCount *int64) *ConnHandler {
+func NewConnHandler(conn net.Conn, engine *mock.Engine, pool *BufferPool, verbose bool, activeConns *int64, queryCount *int64, tlsConfig *tls.Config) *ConnHandler {
 	return &ConnHandler{
 		conn:        conn,
 		engine:      engine,
 		bufferPool:  pool,
 		verbose:     verbose,
 		txStatus:    protocol.TxStatusIdle,
+		tlsConfig:   tlsConfig,
 		stmts:       make(map[string]*protocol.ParseMessage),
 		portals:     make(map[string]*portalState),
 		activeConns: activeConns,
@@ -63,12 +66,14 @@ func (h *ConnHandler) Handle() {
 	reader := bufio.NewReader(h.conn)
 
 	// Step 1: Handshake (SSL negotiation and StartupMessage)
-	if err := h.handleHandshake(reader); err != nil {
+	newReader, err := h.handleHandshake(reader)
+	if err != nil {
 		if !errors.Is(err, io.EOF) && h.verbose {
 			log.Printf("[pgwire] handshake error from %s: %v", h.conn.RemoteAddr(), err)
 		}
 		return
 	}
+	reader = newReader
 
 	// Step 2: Query processing loop
 	for {
@@ -95,25 +100,48 @@ func (h *ConnHandler) Handle() {
 	}
 }
 
-func (h *ConnHandler) handleHandshake(r io.Reader) error {
+func (h *ConnHandler) handleHandshake(r *bufio.Reader) (*bufio.Reader, error) {
 	isSSL, startup, err := protocol.ReadStartupOrSSL(r)
 	if err != nil {
-		return err
+		return r, err
 	}
 
 	if isSSL {
-		// Client requested SSL. We immediately reply 'N' so the driver falls back to plaintext.
-		if err := protocol.WriteSSLRefusal(h.conn); err != nil {
-			return err
-		}
-		// Read the subsequent plaintext StartupMessage
-		var isSSL2 bool
-		isSSL2, startup, err = protocol.ReadStartupOrSSL(r)
-		if err != nil {
-			return err
-		}
-		if isSSL2 {
-			return errors.New("client requested SSL twice")
+		if h.tlsConfig != nil {
+			// Accept SSL: reply single byte 'S'
+			if _, err := h.conn.Write([]byte{'S'}); err != nil {
+				return r, err
+			}
+			tlsConn := tls.Server(h.conn, h.tlsConfig)
+			if err := tlsConn.Handshake(); err != nil {
+				return r, fmt.Errorf("tls handshake failed: %w", err)
+			}
+			h.conn = tlsConn
+			r = bufio.NewReader(h.conn)
+
+			// Read encrypted StartupMessage
+			var isSSL2 bool
+			isSSL2, startup, err = protocol.ReadStartupOrSSL(r)
+			if err != nil {
+				return r, err
+			}
+			if isSSL2 {
+				return r, errors.New("client requested SSL twice")
+			}
+		} else {
+			// Client requested SSL. We immediately reply 'N' so the driver falls back to plaintext.
+			if err := protocol.WriteSSLRefusal(h.conn); err != nil {
+				return r, err
+			}
+			// Read the subsequent plaintext StartupMessage
+			var isSSL2 bool
+			isSSL2, startup, err = protocol.ReadStartupOrSSL(r)
+			if err != nil {
+				return r, err
+			}
+			if isSSL2 {
+				return r, errors.New("client requested SSL twice")
+			}
 		}
 	}
 
@@ -123,21 +151,21 @@ func (h *ConnHandler) handleHandshake(r io.Reader) error {
 
 	// Send AuthenticationOk
 	if err := protocol.WriteAuthOK(h.conn); err != nil {
-		return err
+		return r, err
 	}
 
 	// Send baseline ParameterStatus messages
 	if err := protocol.WriteStandardParameterStatuses(h.conn); err != nil {
-		return err
+		return r, err
 	}
 
 	// Send BackendKeyData (PID 1000, secret 4242)
 	if err := protocol.WriteBackendKeyData(h.conn, 1000, 4242); err != nil {
-		return err
+		return r, err
 	}
 
 	// Send ReadyForQuery (Idle)
-	return protocol.WriteReadyForQuery(h.conn, h.txStatus)
+	return r, protocol.WriteReadyForQuery(h.conn, h.txStatus)
 }
 
 func (h *ConnHandler) processMessage(msgType byte, payload []byte) bool {
@@ -221,7 +249,7 @@ func (h *ConnHandler) handleSimpleQuery(payload []byte) {
 	}
 
 	rule := h.engine.Match(query, nil)
-	h.executeRuleResponse(rule, query)
+	h.executeRuleResponse(rule, query, nil, nil)
 	_ = protocol.WriteReadyForQuery(h.conn, h.txStatus)
 }
 
@@ -279,6 +307,7 @@ func (h *ConnHandler) handleDescribe(payload []byte) {
 
 	var query string
 	var paramOIDs []int32
+	var portal *portalState
 
 	if dMsg.TargetType == 'S' {
 		stmt, exists := h.stmts[dMsg.Name]
@@ -295,7 +324,8 @@ func (h *ConnHandler) handleDescribe(payload []byte) {
 		}
 		_ = protocol.WriteParameterDescription(h.conn, paramOIDs)
 	} else if dMsg.TargetType == 'P' {
-		portal, exists := h.portals[dMsg.Name]
+		var exists bool
+		portal, exists = h.portals[dMsg.Name]
 		if !exists && dMsg.Name != "" {
 			_ = protocol.WriteErrorResponse(h.conn, protocol.ErrorResponse{
 				Code:    "34000",
@@ -325,6 +355,14 @@ func (h *ConnHandler) handleDescribe(payload []byte) {
 		if i < len(rule.Types) && rule.Types[i] != 0 {
 			oid = rule.Types[i]
 		}
+		fmtCode := protocol.FormatText
+		if portal != nil {
+			if len(portal.resultFormats) == 1 && portal.resultFormats[0] == protocol.FormatBinary {
+				fmtCode = protocol.FormatBinary
+			} else if i < len(portal.resultFormats) && portal.resultFormats[i] == protocol.FormatBinary {
+				fmtCode = protocol.FormatBinary
+			}
+		}
 		fields[i] = protocol.FieldDescription{
 			Name:         col,
 			TableOID:     0,
@@ -332,7 +370,7 @@ func (h *ConnHandler) handleDescribe(payload []byte) {
 			DataTypeOID:  oid,
 			DataTypeSize: protocol.DefaultTypeSize(oid),
 			TypeModifier: -1,
-			FormatCode:   protocol.FormatText,
+			FormatCode:   fmtCode,
 		}
 	}
 
@@ -364,15 +402,17 @@ func (h *ConnHandler) handleExecute(payload []byte) {
 
 	query := ""
 	var params [][]byte
+	var resultFormats []int16
 	if portal != nil {
 		if portal.stmt != nil {
 			query = portal.stmt.Query
 		}
 		params = portal.params
+		resultFormats = portal.resultFormats
 	}
 
 	rule := h.engine.Match(query, params)
-	h.executeRuleResponse(rule, query)
+	h.executeRuleResponse(rule, query, params, resultFormats)
 }
 
 func (h *ConnHandler) handleClose(payload []byte) {
@@ -390,7 +430,7 @@ func (h *ConnHandler) handleClose(payload []byte) {
 	_ = protocol.WriteCloseComplete(h.conn)
 }
 
-func (h *ConnHandler) executeRuleResponse(rule *mock.Rule, query string) {
+func (h *ConnHandler) executeRuleResponse(rule *mock.Rule, query string, params [][]byte, resultFormats []int16) {
 	// Fault injection: drop connection
 	if rule.DropConnection {
 		if h.verbose {
@@ -435,6 +475,12 @@ func (h *ConnHandler) executeRuleResponse(rule *mock.Rule, query string) {
 			if i < len(rule.Types) && rule.Types[i] != 0 {
 				oid = rule.Types[i]
 			}
+			fmtCode := protocol.FormatText
+			if len(resultFormats) == 1 && resultFormats[0] == protocol.FormatBinary {
+				fmtCode = protocol.FormatBinary
+			} else if i < len(resultFormats) && resultFormats[i] == protocol.FormatBinary {
+				fmtCode = protocol.FormatBinary
+			}
 			fields[i] = protocol.FieldDescription{
 				Name:         col,
 				TableOID:     0,
@@ -442,7 +488,7 @@ func (h *ConnHandler) executeRuleResponse(rule *mock.Rule, query string) {
 				DataTypeOID:  oid,
 				DataTypeSize: protocol.DefaultTypeSize(oid),
 				TypeModifier: -1,
-				FormatCode:   protocol.FormatText,
+				FormatCode:   fmtCode,
 			}
 		}
 		_ = protocol.WriteRowDescription(h.conn, fields)
@@ -456,7 +502,22 @@ func (h *ConnHandler) executeRuleResponse(rule *mock.Rule, query string) {
 					if val == "NULL" {
 						rowBytes[colIdx] = nil
 					} else {
-						rowBytes[colIdx] = []byte(val)
+						// Dynamic template substitution
+						rendered := mock.RenderTemplate(val, params)
+
+						// Determine format code (binary vs text)
+						isBinary := false
+						if len(resultFormats) == 1 && resultFormats[0] == protocol.FormatBinary {
+							isBinary = true
+						} else if colIdx < len(resultFormats) && resultFormats[colIdx] == protocol.FormatBinary {
+							isBinary = true
+						}
+
+						if isBinary {
+							rowBytes[colIdx] = protocol.EncodeBinaryValue(fields[colIdx].DataTypeOID, rendered)
+						} else {
+							rowBytes[colIdx] = []byte(rendered)
+						}
 					}
 				} else {
 					rowBytes[colIdx] = nil

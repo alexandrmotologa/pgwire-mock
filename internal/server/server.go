@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -17,10 +18,14 @@ type Server struct {
 	engine      *mock.Engine
 	bufferPool  *BufferPool
 	verbose     bool
+	tlsConfig   *tls.Config
 	shutdown    chan struct{}
 	wg          sync.WaitGroup
 	activeConns int64
 	queryCount  int64
+
+	connsMu sync.Mutex
+	conns   map[net.Conn]struct{}
 }
 
 // NewServer initializes a new Server
@@ -31,7 +36,13 @@ func NewServer(addr string, engine *mock.Engine, verbose bool) *Server {
 		bufferPool: NewBufferPool(),
 		verbose:    verbose,
 		shutdown:   make(chan struct{}),
+		conns:      make(map[net.Conn]struct{}),
 	}
+}
+
+// SetTLSConfig sets the TLS configuration for encrypted SSL connections
+func (s *Server) SetTLSConfig(cfg *tls.Config) {
+	s.tlsConfig = cfg
 }
 
 // Start binds to the configured TCP address and accepts incoming client connections
@@ -67,22 +78,38 @@ func (s *Server) acceptLoop() {
 			}
 		}
 
+		s.connsMu.Lock()
+		s.conns[conn] = struct{}{}
+		s.connsMu.Unlock()
+
 		s.wg.Add(1)
 		go func(c net.Conn) {
-			defer s.wg.Done()
-			handler := NewConnHandler(c, s.engine, s.bufferPool, s.verbose, &s.activeConns, &s.queryCount)
+			defer func() {
+				s.connsMu.Lock()
+				delete(s.conns, c)
+				s.connsMu.Unlock()
+				s.wg.Done()
+			}()
+			handler := NewConnHandler(c, s.engine, s.bufferPool, s.verbose, &s.activeConns, &s.queryCount, s.tlsConfig)
 			handler.Handle()
 		}(conn)
 	}
 }
 
-// Stop gracefully terminates the listener and waits for active connections to finish
+// Stop gracefully terminates the listener and closes all active connections
 func (s *Server) Stop() error {
 	close(s.shutdown)
 	var err error
 	if s.listener != nil {
 		err = s.listener.Close()
 	}
+
+	s.connsMu.Lock()
+	for c := range s.conns {
+		_ = c.Close()
+	}
+	s.connsMu.Unlock()
+
 	s.wg.Wait()
 	return err
 }

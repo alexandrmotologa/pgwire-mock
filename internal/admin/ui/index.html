@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PGWire-Mock — Realtime Control Dashboard</title>
+  <style>
+    :root {
+      --bg-main: #0d1117;
+      --bg-surface: #161b22;
+      --bg-subtle: #21262d;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --text-bright: #f0f6fc;
+      --accent: #58a6ff;
+      --accent-hover: #79c0ff;
+      --success: #3fb950;
+      --warning: #d29922;
+      --danger: #f85149;
+      --purple: #bc8cff;
+      --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-main);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 24px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #1f6feb 0%, #388bfd 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: bold;
+      font-size: 18px;
+      box-shadow: 0 0 16px rgba(56, 139, 253, 0.35);
+    }
+
+    .brand h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    .brand-badges {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 2px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(63, 185, 80, 0.12);
+      color: var(--success);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .pill {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .stat-title {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .main-layout { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(22, 27, 34, 0.8);
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg-subtle);
+      color: var(--text);
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: #30363d;
+      color: var(--text-bright);
+    }
+
+    .btn-primary {
+      background: #238636;
+      border-color: rgba(240, 246, 252, 0.1);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: #2ea043;
+    }
+
+    .btn-danger {
+      color: var(--danger);
+    }
+    .btn-danger:hover {
+      background: rgba(248, 81, 73, 0.15);
+      border-color: var(--danger);
+    }
+
+    .table-container {
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .code-cell {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-bright);
+      word-break: break-all;
+    }
+
+    .tag-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+    }
+
+    .tag-select { background: rgba(88, 166, 255, 0.15); color: var(--accent); }
+    .tag-insert { background: rgba(63, 185, 80, 0.15); color: var(--success); }
+    .tag-update { background: rgba(210, 153, 34, 0.15); color: var(--warning); }
+    .tag-delete { background: rgba(248, 81, 73, 0.15); color: var(--danger); }
+    .tag-other { background: rgba(188, 140, 255, 0.15); color: var(--purple); }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-subtle);
+    }
+
+    .tab-btn {
+      padding: 10px 16px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab-btn.active {
+      color: var(--text-bright);
+      border-bottom-color: var(--accent);
+      background: var(--bg-surface);
+    }
+
+    .tab-pane {
+      display: none;
+      padding: 16px;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--bg-main);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-bright);
+      font-size: 13px;
+      font-family: var(--font-mono);
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+    }
+
+    textarea.form-control {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .result-box {
+      background: var(--bg-main);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="logo-icon">PG</div>
+      <div>
+        <h1>PGWire-Mock Dashboard</h1>
+        <div class="brand-badges">
+          <span class="status-badge" id="sse-status">
+            <span class="pulse-dot"></span>
+            LIVE CONNECTED
+          </span>
+          <span class="pill" id="proto-pill">PGWire 3.0</span>
+          <span class="pill" id="state-pill">In-Memory Engine</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <button class="btn" onclick="fetchMetrics()">Refresh Stats</button>
+      <button class="btn btn-danger" onclick="resetQueries()">Clear Query History</button>
+    </div>
+  </header>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-title">Active TCP Connections</div>
+      <div class="stat-value" id="active-conns">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Total Queries Executed</div>
+      <div class="stat-value" id="total-queries">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Registered Mock Rules</div>
+      <div class="stat-value" id="rules-count">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Admin API Endpoint</div>
+      <div class="stat-value" style="font-size: 16px; padding-top: 6px;" id="admin-url">http://localhost</div>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <!-- Left Column: Live Query Stream -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Realtime Query Stream</span>
+        <span class="pill" id="stream-count">0 queries</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 80px;">Time</th>
+              <th style="width: 70px;">Type</th>
+              <th>SQL Query</th>
+              <th>Parameters</th>
+              <th>Matched Rule</th>
+            </tr>
+          </thead>
+          <tbody id="query-stream-body">
+            <tr>
+              <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                Waiting for client queries...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right Column: Control Panels (Rules, Simulator, Chaos) -->
+    <div class="panel">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('rules')">Mock Rules</button>
+        <button class="tab-btn" onclick="switchTab('simulator')">Query Simulator</button>
+        <button class="tab-btn" onclick="switchTab('add-rule')">+ Add Rule</button>
+        <button class="tab-btn" onclick="switchTab('chaos')">Chaos Testing</button>
+      </div>
+
+      <!-- Tab: Rules -->
+      <div class="tab-pane active" id="tab-rules">
+        <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 12px; color: var(--text-muted);">Configured mock conditions and responses:</span>
+          <button class="btn" onclick="fetchRules()">Refresh Rules</button>
+        </div>
+        <div class="table-container" style="max-height: 480px;">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Query / Pattern</th>
+                <th>Hits</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="rules-table-body">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab: Query Simulator -->
+      <div class="tab-pane" id="tab-simulator">
+        <div class="form-group">
+          <label>Test SQL Query</label>
+          <input type="text" class="form-control" id="sim-query" placeholder="SELECT * FROM users WHERE id = $1">
+        </div>
+        <div class="form-group">
+          <label>Parameters (comma separated strings)</label>
+          <input type="text" class="form-control" id="sim-params" placeholder="42">
+        </div>
+        <button class="btn btn-primary" onclick="simulateQuery()">Simulate Match</button>
+
+        <div style="margin-top: 16px;">
+          <label style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px; display: block;">Simulation Result</label>
+          <div class="result-box" id="sim-result">// Run a simulation to test rule matching logic</div>
+        </div>
+      </div>
+
+      <!-- Tab: Add Rule -->
+      <div class="tab-pane" id="tab-add-rule">
+        <div class="form-group">
+          <label>Query or Regex Pattern</label>
+          <input type="text" class="form-control" id="new-query" placeholder="SELECT id, name FROM users">
+        </div>
+        <div class="form-group">
+          <label>Columns (comma separated)</label>
+          <input type="text" class="form-control" id="new-columns" placeholder="id, name">
+        </div>
+        <div class="form-group">
+          <label>Rows (JSON array of string arrays or CSV)</label>
+          <textarea class="form-control" id="new-rows" placeholder='[["1", "Alice"], ["2", "Bob"]]'></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="submitRule()">Add Mock Rule</button>
+      </div>
+
+      <!-- Tab: Chaos Testing -->
+      <div class="tab-pane" id="tab-chaos">
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+          Inject faults, latency, or connection drops into PostgreSQL client sessions:
+        </p>
+        <div class="form-group">
+          <label>Target Query Pattern</label>
+          <input type="text" class="form-control" id="chaos-pattern" placeholder="SELECT * FROM orders.*">
+        </div>
+        <div style="display: flex; gap: 12px;">
+          <div class="form-group" style="flex: 1;">
+            <label>Latency (ms)</label>
+            <input type="number" class="form-control" id="chaos-latency" value="500">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>Jitter (ms)</label>
+            <input type="number" class="form-control" id="chaos-jitter" value="100">
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 8px;">
+          <button class="btn btn-primary" onclick="applyChaos(false)">Inject Latency</button>
+          <button class="btn btn-danger" onclick="applyChaos(true)">Drop Connection On Query</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let queries = [];
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+    }
+
+    function detectQueryType(sql) {
+      const first = (sql || '').trim().split(/\s+/)[0].toUpperCase();
+      switch (first) {
+        case 'SELECT': return ['tag-select', 'SELECT'];
+        case 'INSERT': return ['tag-insert', 'INSERT'];
+        case 'UPDATE': return ['tag-update', 'UPDATE'];
+        case 'DELETE': return ['tag-danger', 'DELETE'];
+        default: return ['tag-other', first || 'SQL'];
+      }
+    }
+
+    function renderQueries() {
+      const tbody = document.getElementById('query-stream-body');
+      document.getElementById('stream-count').textContent = queries.length + ' queries';
+
+      if (queries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">Waiting for client queries...</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = queries.slice(0, 50).map(q => {
+        const d = new Date(q.timestamp);
+        const timeStr = d.toTimeString().split(' ')[0] + '.' + String(d.getMilliseconds()).padStart(3, '0');
+        const [tagClass, tagName] = detectQueryType(q.query);
+        const paramsStr = (q.params && q.params.length > 0) ? q.params.join(', ') : '-';
+        return `
+          <tr>
+            <td style="color: var(--text-muted); font-size: 11px;">${timeStr}</td>
+            <td><span class="tag-badge ${tagClass}">${tagName}</span></td>
+            <td class="code-cell">${escapeHtml(q.query)}</td>
+            <td class="code-cell" style="color: var(--text-muted);">${escapeHtml(paramsStr)}</td>
+            <td><span class="pill" style="font-size: 11px;">${escapeHtml(q.matched_rule_id || 'default')}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    async function fetchMetrics() {
+      try {
+        const res = await fetch('/metrics');
+        const text = await res.text();
+        const activeMatch = text.match(/pgwire_active_connections\s+(\d+)/);
+        const queriesMatch = text.match(/pgwire_total_queries\s+(\d+)/);
+        const rulesMatch = text.match(/pgwire_mock_rules_total\s+(\d+)/);
+
+        if (activeMatch) document.getElementById('active-conns').textContent = activeMatch[1];
+        if (queriesMatch) document.getElementById('total-queries').textContent = queriesMatch[1];
+        if (rulesMatch) document.getElementById('rules-count').textContent = rulesMatch[1];
+      } catch (e) {
+        console.error('failed to fetch metrics', e);
+      }
+    }
+
+    async function fetchRules() {
+      try {
+        const res = await fetch('/api/rules');
+        const data = await res.json();
+        const tbody = document.getElementById('rules-table-body');
+        if (!data.rules || data.rules.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 16px;">No custom rules registered</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.rules.map(r => `
+          <tr>
+            <td><span class="pill">${escapeHtml(r.id)}</span></td>
+            <td class="code-cell">${escapeHtml(r.query || r.pattern || '*')}</td>
+            <td>${r.hits || 0}</td>
+            <td>
+              <button class="btn btn-danger" style="padding: 2px 8px; font-size: 11px;" onclick="deleteRule('${r.id}')">Delete</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        console.error('failed to fetch rules', e);
+      }
+    }
+
+    async function deleteRule(id) {
+      await fetch('/api/rules/' + encodeURIComponent(id), { method: 'DELETE' });
+      fetchRules();
+      fetchMetrics();
+    }
+
+    async function resetQueries() {
+      await fetch('/api/reset', { method: 'POST' });
+      queries = [];
+      renderQueries();
+      fetchMetrics();
+    }
+
+    async function submitRule() {
+      const query = document.getElementById('new-query').value.trim();
+      const cols = document.getElementById('new-columns').value.split(',').map(s => s.trim()).filter(Boolean);
+      let rows = [];
+      try {
+        const rawRows = document.getElementById('new-rows').value.trim();
+        if (rawRows) rows = JSON.parse(rawRows);
+      } catch (e) {
+        alert('Invalid JSON for rows. Expected e.g. [["1", "Alice"]]');
+        return;
+      }
+
+      await fetch('/api/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, columns: cols, rows })
+      });
+
+      fetchRules();
+      fetchMetrics();
+      switchTab('rules');
+    }
+
+    async function applyChaos(drop) {
+      const pattern = document.getElementById('chaos-pattern').value.trim();
+      const latency = parseInt(document.getElementById('chaos-latency').value, 10) || 0;
+      const jitter = parseInt(document.getElementById('chaos-jitter').value, 10) || 0;
+
+      await fetch('/api/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pattern: pattern || '.*',
+          latency_ms: latency,
+          jitter_ms: jitter,
+          drop_connection: drop
+        })
+      });
+
+      alert('Chaos rule applied successfully!');
+      fetchRules();
+      fetchMetrics();
+      switchTab('rules');
+    }
+
+    async function simulateQuery() {
+      const q = document.getElementById('sim-query').value.trim();
+      const p = document.getElementById('sim-params').value.split(',').map(s => s.trim()).filter(Boolean);
+      const res = await fetch('/api/assert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q, exact_params: p, min_count: 0 })
+      });
+      const data = await res.json();
+      document.getElementById('sim-result').textContent = JSON.stringify(data, null, 2);
+    }
+
+    // SSE Setup
+    function setupSSE() {
+      const sseStatus = document.getElementById('sse-status');
+      const es = new EventSource('/api/events');
+
+      es.addEventListener('connected', () => {
+        sseStatus.style.display = 'inline-flex';
+      });
+
+      es.addEventListener('query', (e) => {
+        try {
+          const qLog = JSON.parse(e.data);
+          queries.unshift(qLog);
+          if (queries.length > 200) queries.pop();
+          renderQueries();
+          fetchMetrics();
+        } catch (err) {
+          console.error('SSE parse error', err);
+        }
+      });
+
+      es.onerror = () => {
+        sseStatus.innerHTML = '<span style="color: var(--danger);">● DISCONNECTED</span>';
+      };
+    }
+
+    // Initialize
+    document.getElementById('admin-url').textContent = window.location.origin;
+    fetchMetrics();
+    fetchRules();
+    setupSSE();
+    setInterval(fetchMetrics, 3000);
+  </script>
+</body>
+</html>

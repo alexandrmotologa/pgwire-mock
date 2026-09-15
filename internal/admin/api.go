@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -15,11 +16,15 @@ import (
 	"github.com/alexandrmotologa/pgwire-mock/internal/server"
 )
 
-// Server provides an embedded HTTP REST and Assertion API for test runners
+//go:embed ui/index.html
+var uiFS embed.FS
+
+// Server provides an embedded HTTP REST, Dashboard, and Assertion API for test runners
 type Server struct {
 	addr       string
 	engine     *mock.Engine
 	pgServer   *server.Server
+	broker     *EventBroker
 	httpServer *http.Server
 	listener   net.Listener
 	verbose    bool
@@ -28,10 +33,18 @@ type Server struct {
 
 // NewServer creates a new Admin API server
 func NewServer(addr string, engine *mock.Engine, pgServer *server.Server, verbose bool) *Server {
+	broker := NewEventBroker()
+	if engine != nil {
+		engine.SetOnQueryHook(func(l mock.QueryLog) {
+			broker.Broadcast("query", l)
+		})
+	}
+
 	return &Server{
 		addr:     addr,
 		engine:   engine,
 		pgServer: pgServer,
+		broker:   broker,
 		verbose:  verbose,
 	}
 }
@@ -39,6 +52,10 @@ func NewServer(addr string, engine *mock.Engine, pgServer *server.Server, verbos
 // Start runs the HTTP server
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /", s.handleDashboard)
+	mux.HandleFunc("GET /dashboard", s.handleDashboard)
+	mux.Handle("GET /api/events", s.broker)
 
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /metrics", s.handleMetrics)
@@ -273,6 +290,17 @@ func (s *Server) handleReset(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]string{
 		"status": "cleared",
 	})
+}
+
+func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
+	data, err := uiFS.ReadFile("ui/index.html")
+	if err != nil {
+		http.Error(w, "dashboard unavailable", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
 }
 
 func respondJSON(w http.ResponseWriter, code int, data any) {
