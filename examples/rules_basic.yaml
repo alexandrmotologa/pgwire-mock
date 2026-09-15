@@ -1,0 +1,25 @@
+# Basic PGWire-Mock rules for smoke tests and ping checks
+rules:
+  - id: ping-check
+    query: "SELECT 1"
+    columns: ["?column?"]
+    types: [23]
+    rows:
+      - ["1"]
+    tag: "SELECT 1"
+
+  - id: version-check
+    query: "SELECT version()"
+    columns: ["version"]
+    types: [25]
+    rows:
+      - ["PostgreSQL 16.2 (PGWire-Mock by Alexandr Motologa)"]
+    tag: "SELECT 1"
+
+  - id: current-user
+    query: "SELECT current_user, current_database()"
+    columns: ["current_user", "current_database"]
+    types: [25, 25]
+    rows:
+      - ["postgres", "testdb"]
+    tag: "SELECT 1"

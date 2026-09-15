@@ -1,0 +1,50 @@
+# E-commerce store scenario with user lookups, product catalogs, and order creation
+rules:
+  # User lookup by ID ($1 parameter)
+  - id: user-lookup-1
+    query: "SELECT id, email, full_name, role FROM users WHERE id = $1"
+    params: ["1"]
+    columns: ["id", "email", "full_name", "role"]
+    types: [23, 25, 25, 25]
+    rows:
+      - ["1", "alex@mtlg.site", "Alexandr Motologa", "admin"]
+    tag: "SELECT 1"
+
+  - id: user-lookup-2
+    query: "SELECT id, email, full_name, role FROM users WHERE id = $1"
+    params: ["2"]
+    columns: ["id", "email", "full_name", "role"]
+    types: [23, 25, 25, 25]
+    rows:
+      - ["2", "sarah@example.com", "Sarah Connor", "customer"]
+    tag: "SELECT 1"
+
+  # Product catalog list
+  - id: list-products
+    query: "SELECT id, title, price_cents, stock_count FROM products WHERE active = true ORDER BY id ASC"
+    columns: ["id", "title", "price_cents", "stock_count"]
+    types: [23, 25, 23, 23]
+    rows:
+      - ["101", "Mechanical Keyboard RGB", "14900", "25"]
+      - ["102", "Ultra-Wide Gaming Monitor 34\"", "49900", "12"]
+      - ["103", "Ergonomic Desk Chair", "29900", "8"]
+    tag: "SELECT 3"
+
+  # Create order insert
+  - id: insert-order
+    query: "INSERT INTO orders (user_id, total_cents, status) VALUES ($1, $2, $3) RETURNING id, created_at"
+    params: ["1", "14900", "pending"]
+    columns: ["id", "created_at"]
+    types: [23, 1114]
+    rows:
+      - ["9001", "2026-09-15 20:00:00"]
+    tag: "INSERT 0 1"
+
+  # Count active orders
+  - id: count-orders
+    query: "SELECT COUNT(*) FROM orders"
+    columns: ["count"]
+    types: [20]
+    rows:
+      - ["142"]
+    tag: "SELECT 1"

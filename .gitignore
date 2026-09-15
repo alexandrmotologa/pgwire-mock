@@ -1,0 +1,31 @@
+# Binaries
+bin/
+/pgwire-mock
+/pgwire-mock.exe
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+*.out
+coverage.html
+coverage.txt
+
+# Recordings and local tapes
+*.pgtape
+recordings/
+
+# IDE and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Dependencies
+vendor/

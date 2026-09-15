@@ -1,0 +1,28 @@
+# Chaos and resilience testing rules for timeout, retry, and connection recovery tests
+rules:
+  # Artificial latency simulation
+  - id: slow-query-simulation
+    query: "SELECT * FROM heavy_analytics_report"
+    columns: ["metric", "value"]
+    types: [25, 23]
+    rows:
+      - ["daily_active_users", "8500"]
+    latency_ms: 250
+    jitter_ms: 50
+    tag: "SELECT 1"
+
+  # Transient serialization failure error (40001) to test client retry loops
+  - id: retry-on-serialization-failure
+    query: "UPDATE accounts SET balance = balance - 100 WHERE id = $1"
+    params: ["99"]
+    error:
+      code: "40001"
+      severity: "ERROR"
+      message: "could not serialize access due to concurrent update"
+      detail: "Transaction rolled back to prevent anomaly."
+      hint: "Retry transaction after backoff."
+
+  # Abrupt connection drop simulation
+  - id: socket-drop-simulation
+    query: "SELECT * FROM unstable_service_endpoint"
+    drop_connection: true
